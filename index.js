@@ -140,9 +140,8 @@ client.on("message", handleMessage);
 client.on(
   "ready",
   async () =>
-    await client.user.setActivity({
+    await client.user.setActivity(`Keyword: ${KEYWORD} | !c Shaco`, {
       type: "CUSTOM_STATUS",
-      name: `Keyword: ${KEYWORD} | !c Shaco`,
     })
 );
 
