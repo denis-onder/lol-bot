@@ -1,6 +1,7 @@
 const { Client, MessageEmbed } = require("discord.js");
 const fetch = require("node-fetch");
 const DOMParser = require("dom-parser");
+
 const client = new Client();
 const KEYWORD = "!c";
 
@@ -15,6 +16,12 @@ const sanitize = (str) =>
     .trim()
     .split(" ")
     .map((s) => s.trim().replace("'", ""));
+
+const setActivity = (champName = "Shaco") => {
+  client.user.setActivity(`LoL | !c ${champName}`, {
+    type: "PLAYING",
+  });
+};
 
 const generateMarkdown = (champArray) => {
   let output = "```md\n";
@@ -132,22 +139,20 @@ async function handleMessage(msg) {
 
   const data = { ...lolcounterData, builds };
 
+  setActivity(champName);
+
   msg.channel.send(createEmbed(data));
 }
 
 client.on("message", handleMessage);
 
-client.on(
-  "ready",
-  async () =>
-    await client.user.setActivity(`Keyword: ${KEYWORD} | !c Shaco`, {
-      type: "CUSTOM_STATUS",
-    })
-);
+client.on("ready", () => {
+  console.log(`Bot logged in.\n${client.user.tag}`);
+  setActivity();
+});
 
 client
   .login(process.env.TOKEN)
-  .then(() => console.log("Bot logged in."))
   .catch((err) => console.error("client.login", err));
 
 process.on("beforeExit", (code) => {
