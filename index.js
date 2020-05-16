@@ -18,11 +18,18 @@ const generateMarkdown = (champArray) => {
   return output;
 };
 
+const generateMarkdownLinks = (builds) => {
+  let output = ``;
+  builds.forEach((b, i) => (output += `${i + 1}. [${b.name}](${b.link})\n`));
+
+  return output;
+};
+
 function generateResponse(status, data = null) {
   return { status, data };
 }
 
-function parseHTML(html) {
+function parseCountersFromHTML(html) {
   const document = parser.parseFromString(html);
   const countersWrapper = document.getElementsByClassName("weak-block")[0];
 
@@ -30,9 +37,27 @@ function parseHTML(html) {
     .getElementsByTagName("p")[0]
     .innerHTML.split("is Weak Against")[0];
 
-  const counters = countersWrapper.getElementsByClassName("name");
+  const counters = countersWrapper.getElementsByClassName("name").slice(0, 5);
 
   return { champion: properChampName, counters };
+}
+
+function parseBuildsFromHTML(html) {
+  let output = [];
+
+  const document = parser.parseFromString(html);
+  const builds = document
+    .getElementsByClassName("browse-list__item")
+    .slice(0, 5);
+
+  builds.forEach((b, i) =>
+    output.push({
+      name: b.getElementsByTagName("h3")[0].innerHTML,
+      link: "https://www.mobafire.com" + builds[i].getAttribute("href"),
+    })
+  );
+
+  return output;
 }
 
 function createEmbed(data) {
@@ -40,6 +65,7 @@ function createEmbed(data) {
 
   embed.setTitle(data.champion);
   embed.addField("Counterpicks", generateMarkdown(data.counters));
+  embed.addField("Builds", generateMarkdownLinks(data.builds));
 
   return embed;
 }
@@ -50,22 +76,50 @@ async function getCounterpicks(champion) {
   if (res.status !== 200)
     return generateResponse(res.status, "Champion not found.");
 
-  const data = parseHTML(await res.text());
+  const data = parseCountersFromHTML(await res.text());
 
-  return generateResponse(200, createEmbed(data));
+  return generateResponse(200, data);
+}
+
+async function getBuilds(champion) {
+  champion = champion
+    .trim()
+    .split(" ")
+    .map((s) => s.replace("'", "").toLowerCase())
+    .join("-");
+
+  const res = await fetch(
+    `https://www.mobafire.com/league-of-legends/${champion}-guide`
+  );
+
+  if (res.status !== 200)
+    return generateResponse(res.status, "No guides found.");
+
+  const data = parseBuildsFromHTML(await res.text());
+
+  return generateResponse(200, data);
 }
 
 async function handleMessage(msg) {
   if (!msg.cleanContent.startsWith(KEYWORD)) return;
 
-  let [_, champion] = msg.cleanContent.split(KEYWORD);
+  let [_, champName] = msg.cleanContent.split(KEYWORD);
 
-  if (!champion) return msg.reply("Invalid input.\n```!c <CHAMPION_NAME>```");
+  if (!champName) return msg.reply("Invalid input.\n```!c <CHAMPION_NAME>```");
 
-  champion = champion.trim().toLowerCase();
-  const data = await getCounterpicks(champion);
+  champName = champName.trim().toLowerCase();
 
-  msg.channel.send(data.data);
+  const { data: counters, status } = await getCounterpicks(champName);
+
+  if (status !== 200) return msg.reply("Invalid champion name.");
+
+  const { data: builds, status: bStatus } = await getBuilds(counters.champion);
+
+  if (bStatus !== 200) return msg.reply("No builds found.");
+
+  const data = { ...counters, builds };
+
+  msg.channel.send(createEmbed(data));
 }
 
 client.on("message", handleMessage);
