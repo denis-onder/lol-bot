@@ -18,9 +18,9 @@ const generateMarkdown = (champArray) => {
   return output;
 };
 
-const generateMarkdownLinks = (builds) => {
+const generateBuildLinks = (builds) => {
   let output = ``;
-  builds.forEach((b, i) => (output += `${i + 1}. [${b.name}](${b.link})\n`));
+  builds.forEach((b, i) => (output += `${i + 1}. [${b.name}](${b.link})\n\n`));
 
   return output;
 };
@@ -37,7 +37,7 @@ function parseCountersFromHTML(html) {
     .getElementsByTagName("p")[0]
     .innerHTML.split("is Weak Against")[0];
 
-  const counters = countersWrapper.getElementsByClassName("name").slice(0, 5);
+  const counters = countersWrapper.getElementsByClassName("name").slice(0, 9);
 
   return { champion: properChampName, counters };
 }
@@ -65,7 +65,7 @@ function createEmbed(data) {
 
   embed.setTitle(data.champion);
   embed.addField("Counterpicks", generateMarkdown(data.counters));
-  embed.addField("Builds", generateMarkdownLinks(data.builds));
+  embed.addField("Builds", generateBuildLinks(data.builds));
 
   return embed;
 }
