@@ -128,3 +128,8 @@ client
   .login(process.env.TOKEN)
   .then(() => console.log("Bot logged in."))
   .catch((err) => console.error("client.login", err));
+
+process.on("beforeExit", (code) => {
+  console.log(`Process will exit with code: ${code}`);
+  process.exit(code);
+});
