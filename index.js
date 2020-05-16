@@ -9,6 +9,13 @@ require("dotenv").config();
 
 const parser = new DOMParser();
 
+const sanitize = (str) =>
+  str
+    .toLowerCase()
+    .trim()
+    .split(" ")
+    .map((s) => s.trim().replace("'", ""));
+
 const generateMarkdown = (champArray) => {
   let output = "```md\n";
 
@@ -31,15 +38,22 @@ function generateResponse(status, data = null) {
 
 function parseCountersFromHTML(html) {
   const document = parser.parseFromString(html);
-  const countersWrapper = document.getElementsByClassName("weak-block")[0];
+  const weakAgainstWrapper = document.getElementsByClassName("weak-block")[0];
+  const goodAgainstWrapper = document.getElementsByClassName("strong-block")[0];
 
-  const properChampName = countersWrapper
+  const properChampName = weakAgainstWrapper
     .getElementsByTagName("p")[0]
     .innerHTML.split("is Weak Against")[0];
 
-  const counters = countersWrapper.getElementsByClassName("name").slice(0, 9);
+  const weakAgainst = weakAgainstWrapper
+    .getElementsByClassName("name")
+    .slice(0, 9);
 
-  return { champion: properChampName, counters };
+  const goodAgainst = goodAgainstWrapper
+    .getElementsByClassName("name")
+    .slice(0, 9);
+
+  return { champion: properChampName, counters: weakAgainst, goodAgainst };
 }
 
 function parseBuildsFromHTML(html) {
@@ -64,8 +78,9 @@ function createEmbed(data) {
   const embed = new MessageEmbed();
 
   embed.setTitle(data.champion);
-  embed.addField("Counterpicks", generateMarkdown(data.counters));
-  embed.addField("Builds", generateBuildLinks(data.builds));
+  embed.addField("Weak Against", generateMarkdown(data.counters), true);
+  embed.addField("Good Against", generateMarkdown(data.goodAgainst), true);
+  embed.addField("Builds", generateBuildLinks(data.builds), false);
 
   return embed;
 }
@@ -82,11 +97,7 @@ async function getCounterpicks(champion) {
 }
 
 async function getBuilds(champion) {
-  champion = champion
-    .trim()
-    .split(" ")
-    .map((s) => s.replace("'", "").toLowerCase())
-    .join("-");
+  champion = sanitize(champion).join("-");
 
   const res = await fetch(
     `https://www.mobafire.com/league-of-legends/${champion}-guide`
@@ -107,17 +118,19 @@ async function handleMessage(msg) {
 
   if (!champName) return msg.reply("Invalid input.\n```!c <CHAMPION_NAME>```");
 
-  champName = champName.trim().toLowerCase();
+  champName = sanitize(champName).join("");
 
-  const { data: counters, status } = await getCounterpicks(champName);
+  const { data: lolcounterData, status } = await getCounterpicks(champName);
 
   if (status !== 200) return msg.reply("Invalid champion name.");
 
-  const { data: builds, status: bStatus } = await getBuilds(counters.champion);
+  const { data: builds, status: bStatus } = await getBuilds(
+    lolcounterData.champion
+  );
 
   if (bStatus !== 200) return msg.reply("No builds found.");
 
-  const data = { ...counters, builds };
+  const data = { ...lolcounterData, builds };
 
   msg.channel.send(createEmbed(data));
 }
