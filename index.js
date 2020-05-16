@@ -137,6 +137,15 @@ async function handleMessage(msg) {
 
 client.on("message", handleMessage);
 
+client.on(
+  "ready",
+  async () =>
+    await client.user.setActivity({
+      type: "CUSTOM_STATUS",
+      name: `Keyword: ${KEYWORD} | !c Shaco`,
+    })
+);
+
 client
   .login(process.env.TOKEN)
   .then(() => console.log("Bot logged in."))
