@@ -4,7 +4,8 @@
   "description": "Discord bot for pulling LoL champ data",
   "main": "index.js",
   "scripts": {
-    "start": "node ."
+    "start": "node .",
+    "dev": "nodemon ."
   },
   "repository": {
     "type": "git",
@@ -23,6 +24,7 @@
     "node-fetch": "^2.6.0"
   },
   "devDependencies": {
-    "eslint": "^7.0.0"
+    "eslint": "^7.0.0",
+    "nodemon": "^2.0.4"
   }
 }
